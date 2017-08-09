@@ -1535,6 +1535,31 @@ class api_v3_MembershipTest extends CiviUnitTestCase {
   }
 
   /**
+   * Test that removing override recalculates status
+   *
+   * This test ensures that removing a status override will change the status if appropriate.
+   *
+   * See CRM-20227.
+   */
+  public function testMembershipOverrideNotStuck() {
+    $defaultParams = $this->_params;
+    unset($defaultParams['status_id'], $defaultParams['is_override']);
+    $result = $this->callAPISuccess($this->_entity, 'create', $defaultParams);
+    $defaultParams['id'] = $result['id'];
+    $result = $this->callAPISuccess($this->_entity, 'getsingle', array('id' => $result['id']));
+    $defaultStatusID = $result['status_id'];
+    $result = $this->callAPISuccess($this->_entity, 'create', $this->_params);
+    $this->_params['id'] = $result['id'];
+    $result = $this->callAPISuccess($this->_entity, 'getsingle', array('id' => $result['id']));
+    $this->assertEquals($this->_membershipStatusID, $result['status_id']);
+    $this->_params['is_override'] = '0';
+    unset($this->_params['status_id']);
+    $result = $this->callAPISuccess($this->_entity, 'create', $this->_params);
+    $result = $this->callAPISuccess($this->_entity, 'getsingle', array('id' => $result['id']));
+    $this->assertEquals($defaultStatusID, $result['status_id']);
+  }
+
+  /**
    * Test that all membership types are returned when getoptions is called.
    *
    * This test locks in current behaviour where types for all domains are returned. It should possibly be domain
